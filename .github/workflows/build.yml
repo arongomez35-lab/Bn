@@ -1,1 +1,47 @@
-xcodebuild -project "ThreeOneOSSix.xcodeproj" -scheme "ThreeOneOSSix" -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+name: Build IPA
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Encontrar proyecto
+        run: |
+          PROJECT_PATH=$(find . -name "ThreeOneOSSix.xcodeproj" -type d -print -quit)
+          if [ -z "$PROJECT_PATH" ]; then
+            echo "No se encontró el proyecto"
+            exit 1
+          fi
+          echo "PROJECT_PATH=$PROJECT_PATH" >> "$GITHUB_ENV"
+
+      - name: Compilar
+        run: |
+          xcodebuild \
+            -project "$PROJECT_PATH" \
+            -scheme ThreeOneOSSix \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Crear IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/ThreeOneOSSix.app Payload/
+          zip -r ThreeOneOSSix.ipa Payload
+
+      - name: Descargar IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThreeOneOSSix-IPA
+          path: ThreeOneOSSix.ipa
